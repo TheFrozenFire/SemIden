@@ -7,6 +7,7 @@ contract Identity is JWT {
 
   string public audience;
   JWKS public keys;
+  mapping (string => bool) public subjects;
   
   constructor(string memory aud, JWKS jwks) public payable {
     audience = aud;
@@ -28,6 +29,8 @@ contract Identity is JWT {
     string memory senderBase64 = string(abi.encodePacked(msg.sender)).encode();
     require(senderBase64.strCompare(nonce) == 0, "Sender does not match nonce");
     
+    require(!subjects[sub], "Subject already exists");
     
+    subjects[sub] = true; // Mark subject as existing
   }
 }
