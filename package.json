@@ -1,0 +1,9 @@
+{
+    "name": "zkOpenID",
+    "version": "0.0.1",
+    "private": true,
+    "devDependencies": {
+        "eslint": "^5.8.0",
+        "truffle": "^5.0.11"
+    }
+}
