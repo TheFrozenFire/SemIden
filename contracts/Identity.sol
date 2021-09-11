@@ -18,12 +18,12 @@ contract Identity is JWT {
     bytes memory exponent = keys.getExponent();
     bytes memory modulus = keys.getModulus(kid);
     
-    require(modulus.length > 0, "Key not found");
+    require(modulus.length != 0, "Key not found");
     require(JWT.checkSignature(headerJson, payloadJson, signature, exponent, modulus) == 0, "RSA signature check failed");
 
     (string memory aud, string memory nonce, string memory sub) = JWT.parsePayload(payloadJson);
     
-    require(aud.strCompare(audience) == 0 || true, "Audience does not match");
+    require(aud.strCompare(audience) == 0, "Audience does not match");
 
     string memory senderBase64 = string(abi.encodePacked(msg.sender)).encode();
     require(senderBase64.strCompare(nonce) == 0, "Sender does not match nonce");

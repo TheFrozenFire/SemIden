@@ -14,9 +14,10 @@ contract("Identity", accounts => {
   });
   
   it('depositing a valid token works', async () => {
-    // Static sender account 0x58d1516a240f4b8acdf53e45be7f6675c6338a68
+    // Static sender account 0x58d1516a240f4b8acdf53e45be7f6675c6338a68 (WNFRaiQPS4rN9T5Fvn9mdcYzimg)
     const senderAccount = await web3.eth.personal.importRawKey('0xcd78afcf11ef47370b1ff5ed34bb76365a46314af4bbf96e5340fc12f5d36d5a', 'test');
     await web3.eth.personal.unlockAccount(senderAccount, 'test', 60);
+    
     Identity.defaults({
         from: senderAccount
     });
@@ -27,7 +28,7 @@ contract("Identity", accounts => {
         value: 1e18
     })
   
-    const jwks = await JWKS.deployed();
+    const jwks = await JWKS.new();
     const instance = await Identity.new("390443847062-2d84rt4j07136tpakj9enl9g6qvnvd7b.apps.googleusercontent.com", jwks.address);
     
     await Promise.all(google_jwks['keys'].map(key => jwks.addKey(key['kid'], "0x" + Buffer.from(key['n'], 'base64').toString('hex'))));
@@ -38,10 +39,12 @@ contract("Identity", accounts => {
     const signatureHex = "0x" + Buffer.from(signature, 'base64').toString('hex');
     
     await instance.deposit(headerJson, payloadJson, signatureHex);
+    
+    Identity.defaults({from: accounts[0]});
   });
   
   it('depositing a token without a valid key fails', async () => {
-    const jwks = await JWKS.deployed();
+    const jwks = await JWKS.new();
     const instance = await Identity.new("390443847062-2d84rt4j07136tpakj9enl9g6qvnvd7b.apps.googleusercontent.com", jwks.address);
     
     const [header, payload, signature] = google_jwt.split('.');
@@ -49,6 +52,48 @@ contract("Identity", accounts => {
     const payloadJson = Buffer.from(payload, 'base64').toString();
     const signatureHex = "0x" + Buffer.from(signature, 'base64').toString('hex');
     
-    //assert.rejects(instance.deposit(headerJson, payloadJson, signatureHex), /Sender does not match nonce/, "Token doesn't have a valid key, and should have rejected");
+    await assert.rejects(instance.deposit(headerJson, payloadJson, signatureHex), /Key not found/, "Token doesn't have a valid key, and should have rejected");
+  });
+  
+  it('depositing a token with an invalid signature fails', async () => {
+    const jwks = await JWKS.new();
+    const instance = await Identity.new("390443847062-2d84rt4j07136tpakj9enl9g6qvnvd7b.apps.googleusercontent.com", jwks.address);
+    
+    await Promise.all(google_jwks['keys'].map(key => jwks.addKey(key['kid'], "0x" + Buffer.from(key['n'], 'base64').toString('hex'))));
+    
+    const [header, payload, signature] = google_jwt.split('.');
+    const headerJson = Buffer.from(header, 'base64').toString();
+    const payloadJson = Buffer.from(payload, 'base64').toString();
+    const signatureHex = "0x";
+    
+    await assert.rejects(instance.deposit(headerJson, payloadJson, signatureHex), /RSA signature check failed/, "Token has an invalid signature, and should have rejected");
+  });
+  
+  it('depositing a token with an invalid audience fails', async () => {
+    const jwks = await JWKS.new();
+    const instance = await Identity.new("imaginary.apps.googleusercontent.com", jwks.address);
+    
+    await Promise.all(google_jwks['keys'].map(key => jwks.addKey(key['kid'], "0x" + Buffer.from(key['n'], 'base64').toString('hex'))));
+    
+    const [header, payload, signature] = google_jwt.split('.');
+    const headerJson = Buffer.from(header, 'base64').toString();
+    const payloadJson = Buffer.from(payload, 'base64').toString();
+    const signatureHex = "0x" + Buffer.from(signature, 'base64').toString('hex');
+    
+    await assert.rejects(instance.deposit(headerJson, payloadJson, signatureHex), /Audience does not match/, "Token has an invalid audience, and should have rejected");
+  });
+  
+  it('depositing a token with a nonce different than sender fails', async () => {
+    const jwks = await JWKS.new();
+    const instance = await Identity.new("390443847062-2d84rt4j07136tpakj9enl9g6qvnvd7b.apps.googleusercontent.com", jwks.address);
+    
+    await Promise.all(google_jwks['keys'].map(key => jwks.addKey(key['kid'], "0x" + Buffer.from(key['n'], 'base64').toString('hex'))));
+    
+    const [header, payload, signature] = google_jwt.split('.');
+    const headerJson = Buffer.from(header, 'base64').toString();
+    const payloadJson = Buffer.from(payload, 'base64').toString();
+    const signatureHex = "0x" + Buffer.from(signature, 'base64').toString('hex');
+    
+    await assert.rejects(instance.deposit(headerJson, payloadJson, signatureHex), /Sender does not match nonce/, "Token has a nonce that does not match sender, and should have rejected");
   });
 });

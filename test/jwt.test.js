@@ -45,7 +45,7 @@ contract("JWT", accounts => {
     const {aud, nonce, sub} = await instance.parsePayload(payloadJson);
     
     assert.equal(aud, "390443847062-2d84rt4j07136tpakj9enl9g6qvnvd7b.apps.googleusercontent.com");
-    assert.equal(nonce, "0x58d1516a240f4b8acdf53e45be7f6675c6338a68");
+    assert.equal(nonce, "WNFRaiQPS4rN9T5Fvn9mdcYzimg");
     assert.equal(sub, "114482386540964754644");
   });
 
