@@ -2,16 +2,19 @@ pragma solidity ^0.5.0;
 
 import "./JWT.sol";
 import "./JWKS.sol";
+import "semaphore/contracts/sol/Semaphore.sol";
 
 contract Identity is JWT {
 
   string public audience;
   JWKS public keys;
+  Semaphore public semaphore;
   mapping (string => bool) public subjects;
   
-  constructor(string memory aud, JWKS jwks) public payable {
+  constructor(string memory aud, JWKS jwks, Semaphore sem) public payable {
     audience = aud;
     keys = jwks;
+    semaphore = sem;
   }
 
   function deposit(string memory headerJson, string memory payloadJson, bytes memory signature) public {

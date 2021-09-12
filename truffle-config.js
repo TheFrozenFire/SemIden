@@ -23,6 +23,8 @@
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
 
+const buildSemaphore = require("./scripts/buildSemaphore.js");
+
 module.exports = {
   /**
    * Networks define how you connect to your ethereum client and let you set the
@@ -91,6 +93,10 @@ module.exports = {
       //  evmVersion: "byzantium"
       // }
     }
+  },
+  
+  build: async function(options, callback) {
+    await buildSemaphore(options);
   },
 
   // Truffle DB is currently disabled by default; to enable it, change enabled:
