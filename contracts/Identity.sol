@@ -2,22 +2,21 @@ pragma solidity ^0.5.0;
 
 import "./JWT.sol";
 import "./JWKS.sol";
-import "semaphore/contracts/sol/Semaphore.sol";
+import "./SemaphoreClient.sol";
 
-contract Identity is JWT {
+contract Identity is JWT, SemaphoreClient {
 
   string public audience;
   JWKS public keys;
-  Semaphore public semaphore;
+  
   mapping (string => bool) public subjects;
   
-  constructor(string memory aud, JWKS jwks, Semaphore sem) public payable {
+  constructor(string memory aud, JWKS jwks, Semaphore sem) SemaphoreClient(sem) public payable {
     audience = aud;
     keys = jwks;
-    semaphore = sem;
   }
 
-  function deposit(string memory headerJson, string memory payloadJson, bytes memory signature) public {
+  function insertIdentity(string memory headerJson, string memory payloadJson, bytes memory signature, uint256 identityCommitment) public {
     string memory kid = JWT.parseHeader(headerJson);
     bytes memory exponent = keys.getExponent();
     bytes memory modulus = keys.getModulus(kid);
@@ -33,7 +32,8 @@ contract Identity is JWT {
     require(senderBase64.strCompare(nonce) == 0, "Sender does not match nonce");
     
     require(!subjects[sub], "Subject already exists");
-    
     subjects[sub] = true; // Mark subject as existing
+    
+    insertIdentityAsClient(identityCommitment);
   }
 }
