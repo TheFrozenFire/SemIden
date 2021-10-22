@@ -23,7 +23,7 @@
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
 
-const buildSemaphore = require("./scripts/buildSemaphore.js");
+//const buildSemaphore = require("./scripts/buildSemaphore.js");
 
 module.exports = {
   /**
