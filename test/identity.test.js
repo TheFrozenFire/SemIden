@@ -2,31 +2,18 @@ const fs = require('fs');
 const assert = require('assert');
 
 const JWKS = artifacts.require("JWKS");
-const Semaphore = artifacts.require("Semaphore");
 const Identity = artifacts.require("Identity");
-
-const libsemaphore = require("libsemaphore");
-const semaphoreDir = __dirname + "/../node_modules/semaphore";
-const cirDef = JSON.parse(fs.readFileSync(semaphoreDir + "/circuits/build/circuit.json"));
-const circuit = libsemaphore.genCircuit(cirDef);
-const provingKey = fs.readFileSync(semaphoreDir + "/circuits/build/proving_key.bin");
 
 const google_jwt = fs.readFileSync(__dirname + "/fixtures/google_jwt").toString();
 const google_jwks = JSON.parse(fs.readFileSync(__dirname + "/fixtures/google_jwks.json").toString());
 
-const SEMAPHORE_LEVELS = 20;
-const SEMAPHORE_FIRST_NULLIFIER = 0;
-
 contract("Identity", accounts => {
-  async function setupInstance(audience, jwks, semaphore, keys) {
+  async function setupInstance(audience, jwks, keys) {
     audience = audience ? audience : "390443847062-2d84rt4j07136tpakj9enl9g6qvnvd7b.apps.googleusercontent.com";
     keys = keys ? keys : google_jwks['keys'];
   
     jwks = jwks ? jwks : await JWKS.new();
-    semaphore = semaphore ? semaphore : await Semaphore.new(SEMAPHORE_LEVELS, SEMAPHORE_FIRST_NULLIFIER);
-    const instance = await Identity.new(audience, jwks.address, semaphore.address);
-    
-    semaphore.transferOwnership(instance.address);
+    const instance = await Identity.new(audience, jwks.address);
     
     await Promise.all(keys.map(key => jwks.addKey(key['kid'], "0x" + Buffer.from(key['n'], 'base64').toString('hex'))));
     
@@ -40,13 +27,6 @@ contract("Identity", accounts => {
     const signatureHex = "0x" + Buffer.from(signature, 'base64').toString('hex');
     
     return [headerJson, payloadJson, signatureHex];
-  }
-  
-  function setupIdentity() {
-    const identity = libsemaphore.genIdentity();
-    const identityCommitment = libsemaphore.genIdentityCommitment(identity);
-    
-    return [identity, identityCommitment];
   }
   
   before(async () => {
@@ -63,36 +43,6 @@ contract("Identity", accounts => {
         to: senderAccount,
         value: 1e18
     })
-  });
-
-  it('deposit a valid token, add external nullifier, broadcast signal', async () => {
-    const instance = await setupInstance();
-    const [headerJson, payloadJson, signatureHex] = setupJwt();
-    const [identity, identityCommitment] = setupIdentity();
-    
-    await instance.insertIdentity(headerJson, payloadJson, signatureHex, identityCommitment);
-    
-    const externalNullifier = await libsemaphore.genExternalNullifier("Is Semaphore dope af?");
-    await instance.addExternalNullifier(externalNullifier);
-    
-    const signal = "Hell yes.";
-    
-    const leaves = await instance.getIdentityCommitments();
-    const witness = await libsemaphore.genWitness(
-        signal,
-        circuit,
-        identity,
-        leaves,
-        SEMAPHORE_LEVELS,
-        externalNullifier
-    );
-    
-    const proof = await libsemaphore.genProof(witness.witness, provingKey);
-    const publicSignals = libsemaphore.genPublicSignals(witness.witness, circuit);
-    
-    const formatted = libsemaphore.formatForVerifierContract(proof, publicSignals);
-    
-    await instance.broadcastSignal("0x" + Buffer.from(signal).toString('hex'), [formatted.a, formatted.b, formatted.c].flat(2), formatted.input[0], formatted.input[1], formatted.input[3]);
   });
 
   it('depositing a token without a valid key fails', async () => {
