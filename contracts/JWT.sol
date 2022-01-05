@@ -12,7 +12,11 @@ contract JWT {
     using SolRsaVerify for *;
     using JsmnSolLib for string;
     
-    function checkSignature(string memory headerJson, string memory payloadJson, bytes memory signature, bytes memory exponent, bytes memory modulus) public view returns (uint) {
+    function checkHashSignature(bytes32 memory hash, bytes memory signature, bytes memory exponent, bytes memory modulus) public view returns (uint) {
+        return pkcs1Sha256Verify(hash, signature, exponent, modulus);
+    }
+    
+    function checkMessageSignature(string memory headerJson, string memory payloadJson, bytes memory signature, bytes memory exponent, bytes memory modulus) public view returns (uint) {
         string memory headerBase64 = headerJson.encode();
         string memory payloadBase64 = payloadJson.encode();
         StringUtils.slice[] memory slices = new StringUtils.slice[](2);
